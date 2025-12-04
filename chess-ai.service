@@ -1,0 +1,17 @@
+[Unit]
+Description=Chess AI Learning System
+After=network.target
+
+[Service]
+Type=exec
+User=www-data
+Group=www-data
+WorkingDirectory=F:\1.PyCharm project\12.打败子鸣的象棋游戏
+Environment=FLASK_ENV=production
+Environment=SECRET_KEY=your-secret-key-here
+ExecStart=/usr/local/bin/gunicorn --bind 0.0.0.0:5000 --workers 4 app:app
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

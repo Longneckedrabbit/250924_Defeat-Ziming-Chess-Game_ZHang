@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>象棋AI学习系统 - 对战张子鸣</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+
+        .game-area {
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .board-container {
+            flex: 2;
+        }
+
+        .chess-board {
+            width: 100%;
+            max-width: 600px;
+            height: 660px;
+            background: #f4d03f;
+            border: 3px solid #8b4513;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .board-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+        }
+
+        .board-cell {
+            border: 1px solid #8b4513;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .board-cell:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .board-cell.selected {
+            background-color: rgba(0, 255, 0, 0.5);
+        }
+
+        .board-cell.possible-move {
+            background-color: rgba(0, 0, 255, 0.3);
+        }
+
+        .chess-piece {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid;
+            transition: all 0.3s ease;
+        }
+
+        .chess-piece.red {
+            background: #ff4444;
+            color: white;
+            border-color: #cc0000;
+        }
+
+        .chess-piece.black {
+            background: #333;
+            color: white;
+            border-color: #000;
+        }
+
+        .chess-piece:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+
+        .info-panel {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .game-status {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .game-status h3 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+
+        .ai-status {
+            background: #f3e5f5;
+            border: 1px solid #9c27b0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .ai-status h3 {
+            margin: 0 0 10px 0;
+            color: #7b1fa2;
+        }
+
+        .learning-stats {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .learning-stats h3 {
+            margin: 0 0 10px 0;
+            color: #2e7d32;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn.secondary {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            transition: width 0.3s ease;
+        }
+
+        .progress-tracking {
+            background: #f0f8ff;
+            border: 1px solid #4169e1;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .progress-overview {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .progress-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-circle::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #4CAF50;
+            clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, 50% 0%);
+            transform: rotate(var(--progress));
+            transform-origin: center;
+        }
+
+        .progress-circle::before {
+            content: '';
+            position: absolute;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: white;
+        }
+
+        .progress-text {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .progress-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .progress-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .progress-details {
+            flex: 1;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .detail-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .detail-value {
+            font-weight: bold;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .milestones {
+            background: #fff8dc;
+            border: 1px solid #daa520;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .milestone-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .milestone-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+
+        .milestone-item.achieved {
+            background: #e8f5e8;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .milestone-item.pending {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+
+        .milestone-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .milestone-content {
+            flex: 1;
+        }
+
+        .milestone-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .milestone-desc {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .milestone-progress {
+            font-size: 12px;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .skill-chart {
+            background: #f0f8ff;
+            border: 1px solid #4169e1;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .skill-chart canvas {
+            width: 100%;
+            height: 200px;
+        }
+
+        .progress-actions {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .progress-actions button {
+            margin: 0 5px;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .ai-thinking {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
+        }
+
+        .river {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 2px;
+            background: #8b4513;
+            transform: translateY(-50%);
+        }
+
+        .river-text {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: #f4d03f;
+            padding: 0 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #8b4513;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐴 象棋AI学习系统</h1>
+            <p>专门学习张子鸣棋风的智能象棋对手</p>
+        </div>
+
+        <div class="game-area">
+            <div class="board-container">
+                <div class="chess-board" id="chessBoard">
+                    <div class="river">
+                        <div class="river-text">楚河汉界</div>
+                    </div>
+                    <div class="board-grid" id="boardGrid">
+                        <!-- 棋盘格子将通过JavaScript生成 -->
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn" onclick="startNewGame()">新游戏</button>
+                    <button class="btn secondary" onclick="showLearningProgress()">学习进度</button>
+                    <button class="btn secondary" onclick="showGameHistory()">对局历史</button>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <div class="game-status">
+                    <h3>🎮 游戏状态</h3>
+                    <div id="currentPlayer">当前玩家: 红方 (您)</div>
+                    <div id="gameState">游戏状态: 进行中</div>
+                    <div id="moveCount">回合数: 0</div>
+                </div>
+
+                <div class="ai-status">
+                    <h3>🤖 AI状态</h3>
+                    <div id="aiLevel">AI等级: 小白</div>
+                    <div id="aiThinking" class="ai-thinking" style="display: none;">
+                        AI正在思考中...
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="aiProgress" style="width: 10%"></div>
+                    </div>
+                    <div id="aiLearning">学习状态: 初始阶段</div>
+                </div>
+
+                <div class="learning-stats">
+                    <h3>📊 学习统计</h3>
+                    <div class="stat-item">
+                        <span>总对局数:</span>
+                        <span id="totalGames">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>AI胜利:</span>
+                        <span id="aiWins">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>张子鸣胜利:</span>
+                        <span id="humanWins">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>平局:</span>
+                        <span id="draws">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>学习模式:</span>
+                        <span id="patternsLearned">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>胜率:</span>
+                        <span id="winRate">0%</span>
+                    </div>
+                </div>
+
+                <div class="progress-tracking">
+                    <h3>📈 学习进度追踪</h3>
+                    <div class="progress-overview">
+                        <div class="progress-circle" id="skillProgress">
+                            <div class="progress-text">
+                                <div class="progress-number">0%</div>
+                                <div class="progress-label">总体进度</div>
+                            </div>
+                        </div>
+                        <div class="progress-details">
+                            <div class="detail-item">
+                                <span class="detail-label">当前段位:</span>
+                                <span class="detail-value" id="currentRank">小白</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">技能等级:</span>
+                                <span class="detail-value" id="skillLevel">0</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">连续学习:</span>
+                                <span class="detail-value" id="learningStreak">0天</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">预计完成:</span>
+                                <span class="detail-value" id="estimatedCompletion">无法估计</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="milestones">
+                        <h4>🏆 学习里程碑</h4>
+                        <div class="milestone-list" id="milestoneList">
+                            <!-- 里程碑将通过JavaScript动态加载 -->
+                        </div>
+                    </div>
+
+                    <div class="skill-chart">
+                        <h4>📊 技能进步图表</h4>
+                        <canvas id="skillChart" width="300" height="200"></canvas>
+                    </div>
+
+                    <div class="progress-actions">
+                        <button class="btn secondary" onclick="showDetailedProgress()">详细进度</button>
+                        <button class="btn secondary" onclick="showProgressReport()">进度报告</button>
+                        <button class="btn secondary" onclick="exportProgressData()">导出数据</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏状态
+        let gameState = {
+            board: Array(10).fill(null).map(() => Array(9).fill(null)),
+            currentPlayer: 'red',
+            selectedCell: null,
+            gameActive: true,
+            moveHistory: []
+        };
+
+        // 棋子Unicode符号
+        const pieceSymbols = {
+            red: {
+                king: '帅',
+                advisor: '仕',
+                elephant: '相',
+                horse: '马',
+                rook: '车',
+                cannon: '炮',
+                pawn: '兵'
+            },
+            black: {
+                king: '将',
+                advisor: '士',
+                elephant: '象',
+                horse: '马',
+                rook: '车',
+                cannon: '炮',
+                pawn: '卒'
+            }
+        };
+
+        // 初始化游戏
+        function initializeGame() {
+            createBoard();
+            initializeChessPieces(); // 初始化棋子
+            updateGameStatus();
+            fetchLearningStats();
+        }
+
+        // 创建棋盘
+        function createBoard() {
+            const boardGrid = document.getElementById('boardGrid');
+            boardGrid.innerHTML = '';
+
+            for (let row = 0; row < 10; row++) {
+                for (let col = 0; col < 9; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'board-cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    cell.onclick = () => cellClicked(row, col);
+                    boardGrid.appendChild(cell);
+                }
+            }
+        }
+
+        // 处理单元格点击
+        function cellClicked(row, col) {
+            if (!gameState.gameActive) return;
+
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+
+            if (gameState.selectedCell) {
+                // 尝试移动
+                if (isValidMove(gameState.selectedCell, {row, col})) {
+                    makeMove(gameState.selectedCell, {row, col});
+                }
+                clearSelection();
+            } else {
+                // 选择棋子
+                if (hasPiece(row, col)) {
+                    selectCell(row, col);
+                }
+            }
+        }
+
+        // 选择单元格
+        function selectCell(row, col) {
+            clearSelection();
+            gameState.selectedCell = {row, col};
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            cell.classList.add('selected');
+        }
+
+        // 清除选择
+        function clearSelection() {
+            document.querySelectorAll('.board-cell').forEach(cell => {
+                cell.classList.remove('selected', 'possible-move');
+            });
+            gameState.selectedCell = null;
+        }
+
+        // 检查是否有棋子
+        function hasPiece(row, col) {
+            if (row >= 0 && row < 10 && col >= 0 && col < 9) {
+                const piece = gameState.board[row][col];
+                return piece !== null && piece !== undefined;
+            }
+            return false;
+        }
+
+        // 验证移动是否合法
+        function isValidMove(from, to) {
+            // 这里需要实现象棋规则
+            return true; // 临时返回
+        }
+
+        // 执行移动
+        function makeMove(from, to) {
+            const moveData = {
+                from: {row: from.row, col: from.col},
+                to: {row: to.row, col: to.col},
+                player: gameState.currentPlayer
+            };
+
+            // 发送到后端
+            fetch('/api/game/move', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    from: `${from.row},${from.col}`,
+                    to: `${to.row},${to.col}`
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateBoard(data.game_state);
+                    if (data.ai_move) {
+                        showAIMove(data.ai_move);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+
+            gameState.moveHistory.push(moveData);
+            gameState.currentPlayer = gameState.currentPlayer === 'red' ? 'black' : 'red';
+            updateGameStatus();
+        }
+
+        // 显示AI移动
+        function showAIMove(aiMove) {
+            document.getElementById('aiThinking').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('aiThinking').style.display = 'none';
+                updateBoard(aiMove);
+            }, 1000);
+        }
+
+        // 更新棋盘显示
+        function updateBoard(gameStateData) {
+            // 更新游戏状态
+            gameState.board = gameStateData.board;
+            gameState.currentPlayer = gameStateData.current_player;
+            gameState.gameActive = gameStateData.game_state === 'playing';
+
+            // 清除所有棋子
+            document.querySelectorAll('.chess-piece').forEach(piece => piece.remove());
+
+            // 重新渲染棋子
+            for (let row = 0; row < 10; row++) {
+                for (let col = 0; col < 9; col++) {
+                    const piece = gameState.board[row][col];
+                    if (piece) {
+                        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                        if (cell) {
+                            const pieceElement = document.createElement('div');
+                            pieceElement.className = `chess-piece ${piece.color}`;
+                            pieceElement.textContent = pieceSymbols[piece.color][piece.type];
+                            pieceElement.dataset.row = row;
+                            pieceElement.dataset.col = col;
+                            cell.appendChild(pieceElement);
+                        }
+                    }
+                }
+            }
+
+            updateGameStatus();
+        }
+
+        // 初始化棋盘（显示初始棋子布局）
+        function initializeChessPieces() {
+            // 红方棋子（下方）
+            // 车
+            placePiece(9, 0, 'red', 'rook');
+            placePiece(9, 8, 'red', 'rook');
+            // 马
+            placePiece(9, 1, 'red', 'horse');
+            placePiece(9, 7, 'red', 'horse');
+            // 相
+            placePiece(9, 2, 'red', 'elephant');
+            placePiece(9, 6, 'red', 'elephant');
+            // 士
+            placePiece(9, 3, 'red', 'advisor');
+            placePiece(9, 5, 'red', 'advisor');
+            // 帅
+            placePiece(9, 4, 'red', 'king');
+            // 炮
+            placePiece(7, 1, 'red', 'cannon');
+            placePiece(7, 7, 'red', 'cannon');
+            // 兵
+            for (let i = 0; i < 9; i += 2) {
+                placePiece(6, i, 'red', 'pawn');
+            }
+
+            // 黑方棋子（上方）
+            // 车
+            placePiece(0, 0, 'black', 'rook');
+            placePiece(0, 8, 'black', 'rook');
+            // 马
+            placePiece(0, 1, 'black', 'horse');
+            placePiece(0, 7, 'black', 'horse');
+            // 象
+            placePiece(0, 2, 'black', 'elephant');
+            placePiece(0, 6, 'black', 'elephant');
+            // 士
+            placePiece(0, 3, 'black', 'advisor');
+            placePiece(0, 5, 'black', 'advisor');
+            // 将
+            placePiece(0, 4, 'black', 'king');
+            // 炮
+            placePiece(2, 1, 'black', 'cannon');
+            placePiece(2, 7, 'black', 'cannon');
+            // 卒
+            for (let i = 0; i < 9; i += 2) {
+                placePiece(3, i, 'black', 'pawn');
+            }
+        }
+
+        // 放置棋子
+        function placePiece(row, col, color, type) {
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            if (cell) {
+                const pieceElement = document.createElement('div');
+                pieceElement.className = `chess-piece ${color}`;
+                pieceElement.textContent = pieceSymbols[color][type];
+                pieceElement.dataset.row = row;
+                pieceElement.dataset.col = col;
+                cell.appendChild(pieceElement);
+
+                // 更新游戏状态
+                if (!gameState.board[row]) {
+                    gameState.board[row] = Array(9).fill(null);
+                }
+                gameState.board[row][col] = {type: type, color: color};
+            }
+        }
+
+        // 更新游戏状态显示
+        function updateGameStatus() {
+            document.getElementById('currentPlayer').textContent =
+                `当前玩家: ${gameState.currentPlayer === 'red' ? '红方 (您)' : '黑方 (AI)'}`;
+            document.getElementById('gameState').textContent =
+                `游戏状态: ${gameState.gameActive ? '进行中' : '已结束'}`;
+            document.getElementById('moveCount').textContent =
+                `回合数: ${gameState.moveHistory.length}`;
+        }
+
+        // 开始新游戏
+        function startNewGame() {
+            fetch('/api/game/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateBoard(data.game_state);
+                    clearSelection();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        // 获取学习统计
+        function fetchLearningStats() {
+            fetch('/api/learning/stats')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('totalGames').textContent = data.games_played;
+                document.getElementById('aiWins').textContent = data.wins;
+                document.getElementById('humanWins').textContent = data.losses;
+                document.getElementById('draws').textContent = data.draws;
+                document.getElementById('patternsLearned').textContent = data.patterns_learned;
+
+                const totalGames = data.games_played;
+                const winRate = totalGames > 0 ? ((data.wins / totalGames) * 100).toFixed(1) : 0;
+                document.getElementById('winRate').textContent = `${winRate}%`;
+
+                // 更新AI进度条
+                const progress = Math.min((totalGames / 100) * 100, 100);
+                document.getElementById('aiProgress').style.width = `${progress}%`;
+
+                // 更新AI等级
+                let aiLevel = '小白';
+                if (totalGames > 50) aiLevel = '初学者';
+                if (totalGames > 100) aiLevel = '业余';
+                if (totalGames > 200) aiLevel = '中级';
+                if (totalGames > 500) aiLevel = '高级';
+                if (totalGames > 1000) aiLevel = '大师';
+
+                document.getElementById('aiLevel').textContent = `AI等级: ${aiLevel}`;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+
+            // 获取进度追踪数据
+            fetchProgressData();
+        }
+
+        // 获取进度追踪数据
+        function fetchProgressData() {
+            // 获取进度总结
+            fetch('/api/progress/summary')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateProgressSummary(data.summary);
+                }
+            })
+            .catch(error => {
+                console.error('获取进度总结失败:', error);
+            });
+
+            // 获取里程碑数据
+            fetch('/api/progress/milestones')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateMilestones(data.milestones);
+                }
+            })
+            .catch(error => {
+                console.error('获取里程碑失败:', error);
+            });
+
+            // 获取图表数据
+            fetch('/api/progress/chart-data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateChart(data.chart_data);
+                }
+            })
+            .catch(error => {
+                console.error('获取图表数据失败:', error);
+            });
+        }
+
+        // 更新进度总结
+        function updateProgressSummary(summary) {
+            // 更新进度圆环
+            const progressCircle = document.getElementById('skillProgress');
+            const progressPercent = summary.overall_progress;
+            progressCircle.style.setProperty('--progress', `${progressPercent * 3.6}deg`);
+            document.querySelector('.progress-number').textContent = `${Math.round(progressPercent)}%`;
+
+            // 更新详细信息
+            document.getElementById('currentRank').textContent = summary.skill_rank;
+            document.getElementById('skillLevel').textContent = Math.round(summary.skill_level);
+            document.getElementById('learningStreak').textContent = `${summary.learning_streak}天`;
+            document.getElementById('estimatedCompletion').textContent = summary.estimated_completion;
+        }
+
+        // 更新里程碑
+        function updateMilestones(milestones) {
+            const milestoneList = document.getElementById('milestoneList');
+            milestoneList.innerHTML = '';
+
+            // 只显示最近的5个里程碑
+            const recentMilestones = milestones.slice(0, 5);
+
+            recentMilestones.forEach(milestone => {
+                const milestoneItem = document.createElement('div');
+                milestoneItem.className = `milestone-item ${milestone.achieved ? 'achieved' : 'pending'}`;
+
+                const icon = milestone.achieved ? '🏆' : '⏳';
+                const status = milestone.achieved ? '已达成' : '进行中';
+
+                milestoneItem.innerHTML = `
+                    <div class="milestone-icon">${icon}</div>
+                    <div class="milestone-content">
+                        <div class="milestone-name">${milestone.name}</div>
+                        <div class="milestone-desc">${milestone.description}</div>
+                    </div>
+                    <div class="milestone-progress">${status}</div>
+                `;
+
+                milestoneList.appendChild(milestoneItem);
+            });
+        }
+
+        // 更新图表
+        function updateChart(chartData) {
+            // 这里可以使用Chart.js或其他图表库来显示数据
+            // 简化实现，只更新一些基本数据
+            console.log('图表数据:', chartData);
+        }
+
+        // 显示详细进度
+        function showDetailedProgress() {
+            alert('详细进度功能正在开发中...');
+        }
+
+        // 显示进度报告
+        function showProgressReport() {
+            fetch('/api/progress/report')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.report);
+                }
+            })
+            .catch(error => {
+                console.error('获取进度报告失败:', error);
+                alert('获取进度报告失败');
+            });
+        }
+
+        // 导出进度数据
+        function exportProgressData() {
+            alert('导出数据功能正在开发中...');
+        }
+
+        // 显示学习进度
+        function showLearningProgress() {
+            alert('学习进度功能正在开发中...');
+        }
+
+        // 显示对局历史
+        function showGameHistory() {
+            alert('对局历史功能正在开发中...');
+        }
+
+        // 页面加载时初始化游戏
+        window.onload = initializeGame;
+    </script>
+</body>
+</html>
